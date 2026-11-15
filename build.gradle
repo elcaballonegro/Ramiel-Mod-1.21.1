@@ -1,0 +1,50 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.78'
+}
+
+version = mod_version
+group = mod_group_id
+base { archivesName = mod_id }
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = project.neo_version
+
+    runs {
+        client {
+            client()
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+        server {
+            server()
+            programArgument '--nogui'
+            systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        }
+    }
+
+    mods {
+        "${mod_id}" { sourceSet sourceSets.main }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Rimulib (>= 1.2.2, the first version that ships the public API classes).
+// Download the NeoForge 1.21.1 jar and save it as libs/rimulib.jar.
+// It must be on the compile classpath AND loaded as a mod in the dev run.
+// ---------------------------------------------------------------------------
+dependencies {
+    implementation files('libs/rimulib.jar')
+}
+
+tasks.withType(ProcessResources).configureEach {
+    var props = [
+        mod_id: mod_id, mod_name: mod_name, mod_version: mod_version,
+        mod_license: mod_license, mod_authors: mod_authors, mod_description: mod_description
+    ]
+    inputs.properties props
+    filesMatching('META-INF/neoforge.mods.toml') { expand props }
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
