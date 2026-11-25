@@ -1,5 +1,32 @@
-# Ramiel-Mod-1.21.1
-Adds Ramiel from the Rebuild of Evangelion to Minecraft as a new boss mob, incorporating its forms, attacks, destruction, and phases. Also adds a craftable railgun for players, but it's expensive.
+# Ramiel (NeoForge 1.21.1)
 
-I will be truthful: this mod is a side project and my first attempt at designing a workflow for Claude. A lot went into the main setup for Claude before actual workshopping took place, and I had to manually tweak files to use for setup; i.e., I didn't just drop a few PNGs and call it a day. This also runs using the Rimulib used in the Shooting Star mod; I wanted to test Claude's abilities at coding with a mod API rather than workshopping a full library.
-Note: That actually might be a task for later.
+A boss mod: **Ramiel**, the octahedral Angel from *Rebuild of Evangelion*, plus a craftable handheld **Railcannon**.
+Fan project; every texture, model and sound is original/generated. Mod id `ramiel`, package `dev.ramiel`, Java 21.
+
+## Requirements
+- NeoForge 1.21.1
+- **Rimulib >= 1.2.2** (the 1.2.1 jar has no API classes). Put the jar at `libs/rimulib.jar` to build; players need it in `mods/`.
+
+## Playing
+| Item | How to get it | Use |
+|---|---|---|
+| **Mini Ramiel** | 4 lapis blocks + 4 diamonds + nether star | Right click: Ramiel falls from space onto the nearest deep water (or 110 blocks ahead). Sneak + right click: settings screen. Consumed on use (not in creative). |
+| **Railcannon** | `DNR / IBI / RND` = diamond block, netherite ingot, redstone block, iron block, beacon | Hold right click ~2 s (scope opens, view zooms), release to fire. Pierces everything, ignores Ramiel's shield. 20% of Ramiel's health on the body, 50% on the exposed core. |
+| **Plasma Cell** | nether star + diamond + blaze powder + ender pearl -> 2 | Railcannon ammo (one per shot) |
+| **Angel Core** | dropped by a defeated Ramiel | angel core + blaze powder + ender pearl -> 6 plasma cells |
+
+Ramiel idles, spins slowly and never tracks anyone until threatened. Left alone it drills into the ground, charges a huge blast
+(red ring on the ground, "BLAST ZONE" HUD, alarm) and leaves a crater. When attacked, or when a player comes close, it changes shape
+(pieces visibly split, fold and re-form) and fires: Lance, Cross, Sunburst, Sentinel. Below 2/3 health it is stunned for a minute,
+then stays in the star form and fires mountain-destroying beams until killed.
+Weak point: the red core, exposed while charging and recovering. Shield (phase 1): projectiles bounce until its durability breaks.
+
+## Commands (op level 2)
+`/ramiel summon` | `summon_here` (anywhere, no water search) | `kill` | `phase2` | `heal` | `settings`
+
+## Settings
+17 live settings (destruction, impact radius/charge time, damage, health, speed, aggression, notice range, mobs, cutscenes, horizon render...).
+Open with Sneak + right click on the Mini Ramiel, or `/ramiel settings`. Saved to `ramiel-common.toml`. See TUNING.md.
+
+## Build
+`./gradlew build` (copy `neo_version` and the moddev plugin version from the 1.21.1 MDK if the guessed ones fail). See ARCHITECTURE.md.
