@@ -1,177 +1,171 @@
 # RAMIEL MOD — HANDOFF (read this first in every new chat)
 
-Target: NeoForge 1.21.1 (Java 21). Mod id `ramiel`, package `dev.ramiel`. A boss mod: Ramiel (octahedral Angel,
-Rebuild of Evangelion) + craftable handheld Railcannon. Uses the public **Rimulib** API for craters, cutscenes,
-screen effects. Fan project; all assets are original/generated.
+Target: NeoForge 1.21.1 (Java 21). Mod id `ramiel`, package `dev.ramiel`. A boss mod: Ramiel (octahedral Angel, Rebuild of Evangelion) +
+a craftable handheld Railcannon. Uses the public **Rimulib** API for craters, cutscenes, screen effects. Fan project; all assets are original/generated.
+
+**STATUS: Phases 1-3 are finished. Every feature is written and syntax-checked, but the project has NEVER been compiled against NeoForge/Rimulib
+and NEVER run in game. NEXT = PHASE 4 (section 6): the user builds on their machine and pastes errors.**
+Suggested prompt: "Read HANDOFF.md and unzip ramiel-mod-snapshot.zip. Do Phase 4. Here is build-errors.txt: ..."
 
 ## 0. Rules for working in this project (saves usage)
-- One PHASE per chat. Start with: "Read HANDOFF.md, then do Phase N. Only open the files it lists."
-- Do NOT re-upload the 413 reference frames unless a phase says so. Section 3 already contains the analysis.
-- Do NOT re-fetch rimulib docs. Section 2 has every signature used.
-- Source lives in `ramiel-mod-snapshot.zip` (project knowledge). Unzip it in the sandbox; `view` only needed files.
-- Update HANDOFF.md + the snapshot zip ONLY when the user asks (they decide when a phase ends). Until then just build on the current files.
-- Sandbox facts: no access to Maven/Gradle (cannot compile against NeoForge). GitHub, pypi, npm, apt work.
-  The shell is `sh`: brace expansion `{a,b}` does NOT work (use bash -c or write paths out). Use `javac` only to catch
-  SYNTAX errors (filter out "package does not exist"/"cannot find symbol"). Python: numpy + PIL + soundfile(OGG ok).
-  Files in /home/claude reset between chats: re-extract the snapshot each time.
+- One PHASE per chat. Only open the files the task needs. Do NOT re-upload the 413 reference frames (section 3 has the analysis) and do NOT re-fetch
+  the Rimulib docs (section 2 was checked against docs 1.2.4 during Phase 2; re-fetch only for one failing signature).
+- Source lives in `ramiel-mod-snapshot.zip` (project knowledge). Unzip it in the sandbox. Update HANDOFF.md + the zip ONLY when the user says the
+  phase is done, and then deliver only those two files in outputs (previews live in `docs/previews/` inside the zip).
+- Sandbox facts: Maven, Gradle and maven.neoforged.net are NOT reachable, so nothing can be compiled against NeoForge here. GitHub (raw), pypi, npm, apt work.
+  The shell is `sh` (no `{a,b}` brace expansion; use explicit paths or `bash -c`). A JDK is NOT preinstalled: `apt-get install -y openjdk-21-jdk-headless`.
+  The asset/preview tools need `pip install soundfile pillow numpy --break-system-packages`. /home/claude resets between chats: re-extract the zip each time.
+- Tools in `tools/` (all run without Minecraft):
+  - `check_syntax.py`: javac with the "library not installed" noise filtered. LIMITS: it cannot catch a wrong call whose arguments involve library types, and it stops at the first parse error.
+  - `collect_errors.py`: Phase 4. Groups a Gradle build log (or, with `--game`, a game log) into a short report for pasting.
+  - `model-harness/run.sh` with `check` | `forms out.png` | `morph FROM TO out.png` | `interrupt`: runs the brick model against a stub JOML and renders previews.
+  - `shock-tests/run.sh`: unit tests for the shockwave maths and tree finding (28 checks).
+  - `gen_assets.py`: regenerates every texture and sound.
+- LOOK at forms with the harness renderer before changing them. During Phase 3 it found one real bug (an out-of-range direction helper) and `check_syntax.py` found another (a type error in my own change).
 
 ## 1. Decisions already made (do not re-debate)
-- Renderer: procedural "brick" model, no GeckoLib. 57-brick pool; each brick = frustum (box/pyramid/spike/slab) with
-  centre, quaternion, h, bottom half-size (bw,bd), top half-size (tw,td), rgb, glow, alpha. Forms = sets of bricks;
-  morph = per-brick lerp (+slerp) with staggered delay and an outward "burst". Shading is CPU: fake reflection via
-  fresnel + sky-gradient env + sun spec, drawn with RenderType.entityTranslucent (+ eyes/emissive for glow).
-- Brick pool indices: 0-1 halves(top,bottom) | 2-9 plates/slabs(8 boxes) | 10-41 spikes(32) | 42-53 shards(12) |
-  54 needle | 55-56 core (top/bottom pyramid). N=57. Unused bricks collapse to zero size.
-- Hit boxes: vanilla AABB = ONLY the core (5.2 blocks) so fluid checks stay cheap. Body = 6 stacked `RamielPart`
-  PartEntities (like Ender Dragon). Exact hit decided by `RamielHitTest` (octahedron |x|+|y|+|z|<=R*scale + core sphere).
-  `HitResolver` (ProjectileImpactEvent) cancels misses, applies shield bounce, tags core/body for damage rules.
-- R = 24 blocks (half-diagonal). Hover = config 84 blocks (centre above ground/water).
-- Health: real pool `hp` (BASE 3000 x config), vanilla max-health attribute fixed at 1000 (vanilla caps at 1024).
-  Body hit x0.25, exposed core x5. Railcannon: 20% max HP body / 50% core (2 core shots kill), ignores shield.
-  Phase gate at 2/3 HP -> StunAttack (60 s helpless, urchin form) -> phase 2 = StarAttack only (30-60 s cooldown).
-  Stun floor 30%. Railcannon/kill bypass gates.
-- Networking: NeoForge native payloads (`Payloads`), NOT rimulib NetApi (1.21.1 NetApi needs RimuPacket wrapper).
-  Beams are NOT sent as packets: they are synced entity data (beamKind/len/t + aim yaw/pitch) and drawn client-side.
-- Config = ModConfigSpec COMMON (`RamielConfig`), edited live by `Setting` enum (17 rows) via settings screen packet
-  (needs op level 2 or single-player owner).
-- Far render ("LOD"): server sends `Beacon` every 10 ticks to players within farRange; client draws simplified Ramiel
-  by clamping to 0.9*getDepthFar() and scaling by the same factor (technique verified in the MIT addon).
-- Arrival from space: server entity sits at its FINAL position; synced `arrival` 0..1 over 280 ticks; renderer offsets
-  the model up by `arrivalOffsetY` (2600 blocks, ease-in); intro cutscene + SpaceScene (stars/Earth/sun) driven client-side.
-- Chunk anchor: forces 5x5 chunks around Ramiel (only chunks it forced itself are released).
-- Blast-zone ground ring/scars are GEOMETRY (terrain-conforming quads), not post shaders (scenePosAt signature unknown).
-  Impact frames use a custom FxApi shader `ramiel_impact.fsh` (only documented uniforms/samplers).
-- Railcannon is handheld (hold RMB 40 ticks to charge, release to fire), ammo = plasma cell. Scope overlay + zoom.
-- Mini Ramiel item: BEWLR spinning crystal; RMB = summon above nearest deep water (fallback: 110 blocks ahead);
-  Shift+RMB = settings screen. Consumed on success (not in creative).
+- **Renderer**: procedural "brick" model, no GeckoLib. Pool of **147** bricks; each = frustum (box/pyramid/spike/slab): centre, quaternion, h, bottom half-size (bw,bd),
+  top half-size (tw,td), rgb, glow, alpha. CPU shading (fresnel + sky env + sun spec), `RenderType.entityTranslucent` (+ eyes/emissive for glow).
+  Index map: 0-1 halves | 2-9 plates | 10-41 spikes | 42-53 shards | 54 needle | 55-144 WHEEL (Sunburst only) | 145-146 core (always last).
+- **Transformations are pieces moving, never fading** (`RamielModel`, `Brick.lerp`, `FormPoses.fold`): rest form -> big form = the octahedron SPLITS into the shared "folded" pose
+  (stack of thin plates + caps + bundle of long shards + chips + spine), then the pieces fly out. Anything -> dormant = REVERSION: fold, a beat, then the pieces accelerate and SNAP into the octahedron.
+  It is identical for EVERY attack (server `Attack.goTo(REVERT)` calls `setForm(afterForm(), duration)`). Big -> big folds then unfolds. Anything -> URCHIN bursts straight out (no fold).
+  A piece used by only one form flies out of / into the core keeping its colour and opacity. Rest forms: DORMANT SHIELD DRILL. Big: LANCE CROSS SUNBURST SENTINEL STAR URCHIN.
+  STAR stays out in phase 2 (by design); STUN reverts into STAR.
+- **Model continuity** (`RamielModel.computeFor(key,...)`): remembers the last pose per Ramiel. It holds morph at 0 while the clock restarts (the entity's morph glides from its old value for one tick,
+  which used to flash a near-finished pose at the start of EVERY transformation) and starts an interrupting transformation from the pose on screen. Jumps are now < 0.01 R.
+- **Sunburst = the wheel**: small glassy central octahedron housing the core; a ring of 20 small octahedra (radius 0.8 R, spinning with the body) joined to it by thin spokes; they alternate
+  between a shield (mint kite leaning outward) and a long spike up + short spike down. The whole wheel fits inside 1.0 R. While SUNBURST the hit volume is a flat disc (`RamielHitTest.rayWheel`).
+- Hit boxes: vanilla AABB = ONLY the core (5.2 blocks). Body = 6 stacked `RamielPart` PartEntities (like the Ender Dragon; widths 48/32/16, 8 tall). Exact hit by `RamielHitTest`
+  (octahedron |x|+|y|+|z| <= R*scale, or the disc for Sunburst, + core sphere). `HitResolver` (ProjectileImpactEvent) cancels misses, applies shield bounce, tags core/body.
+- R = 24 blocks (half-diagonal). Hover = config 84 blocks.
+- Health: real pool `hp` (BASE 3000 x config); vanilla max-health attribute fixed at 1000. Body hit x0.25, exposed core x5. Railcannon: 20% max HP body / 50% core (2 core shots kill), ignores shield.
+  Phase gate at 2/3 HP -> StunAttack (60 s helpless, urchin) -> phase 2 = StarAttack only (30-60 s cooldown). Stun floor 30%. Railcannon/kill bypass gates.
+- Networking: NeoForge native payloads (`Payloads`), NOT rimulib NetApi. Beams are not packets: synced entity data (beamKind/len/t + aim) drawn client-side.
+- Config = ModConfigSpec COMMON (`RamielConfig`), edited live via the `Setting` enum (19 rows; new ones are APPENDED so ordinals stay stable) through the settings screen packet (op level 2 or single-player owner).
+- Far render ("LOD"): `Beacon` every 10 ticks to players within farRange; the client draws a simplified Ramiel clamped to 0.9*getDepthFar().
+- Arrival: the server entity sits at its FINAL position; synced `arrival` 0..1 over 280 ticks; the renderer offsets the model up `arrivalOffsetY` (2600, ease-in); camera above 900 blocks turns `SpaceScene` on.
+  Intro film range is 480 (entities are only tracked to ~512).
+- Chunk anchor: forces 5x5 chunks around Ramiel. Blast-zone ground ring/scars are GEOMETRY, not post shaders. Impact frames use `ramiel_impact.fsh` (FxApi).
+- Railcannon: handheld (hold RMB 40 ticks, release), plasma cell ammo, scope overlay + zoom (`ScopeLayer`). Mini Ramiel: BEWLR spinning crystal (created lazily); RMB summons (nearest deep water, else 110 ahead);
+  Shift+RMB opens settings. Angel Core = trophy/crafting material (drops from Ramiel; makes 6 plasma cells), NOT a summoner.
+- **Shockwave** (`docs/SHOCKWAVE.md`): `Shockwave.launch(level, GROUND centre, bias, radius, life, strength, trees, cause)` is called next to each `FxKind.SHOCKWAVE` with the SAME radius and duration; the ring follows the
+  client's curve R*(1-(1-t/life)^2.2). It throws entities away from the blast (terrain cover, knockback resistance, sneaking and shields reduce it; speed cap 2.8 b/t, lift cap 0.9; damage only in the inner 30%).
+  Trees: `TreeScan` (logs, then leaves by the vanilla `distance`; natural = >= 3 non-persistent leaves and the base stands on dirt) -> `ToppleEntity` carries the REAL blocks (one synced CompoundTag, also saved);
+  the client turns them 90 degrees about the base block (`ToppleRenderer`, vanilla block renderer, no custom models); the server places the blocks rotated when it ends (`ShockMath.rotateOffset`, the same rotation).
+  Budget 6 trees/tick, 140/wave. Settings: Shockwave (0-3) and Trees fall (needs Destruction > 0).
 
-## 2. Rimulib facts (version needed: >= 1.2.2; docs now describe 1.2.4. The user's uploaded jar 1.2.1 has NO API classes!)
-Packages for 1.21.1: `cyou.rimuru.rimulib.mc1211.api.{RimulibApi,CarveApi,WardApi,...}`,
-`...mc1211.client.api.{FilmApi,FxApi,UiApi,MenuApi}`, `...mc1211.client.cinematic.{Shot,Subject,CameraPose,Cutscene}`,
-`...mc1211.bulwark.Threat` (Kind: COLUMN,BOLT,BLAST,FALLING,CUT). Do NOT touch internal classes (docs forbid it).
+## 2. Rimulib facts (version needed: >= 1.2.2; docs describe 1.2.4. The user's old 1.2.1 jar has NO API classes!)
+Packages for 1.21.1 (confirmed on the docs "Getting started" page): `cyou.rimuru.rimulib.mc1211.api.{RimulibApi,CarveApi,WardApi,...}`, `...mc1211.client.api.{FilmApi,FxApi,UiApi,MenuApi}`,
+`...mc1211.client.cinematic.{Shot,Subject,CameraPose,Cutscene}`, `...mc1211.bulwark.Threat` (Kind: COLUMN,BOLT,BLAST,FALLING,CUT). The docs' API reference page omits the `mc1211` segment: use it. Do NOT touch internal classes.
+NeoForge has no separate client source set: keep client.api calls in code that only runs on the client.
 ```
-RimulibApi.connect(String modId, Class<?> anchor) -> RimuMod   // keep in static field
+RimulibApi.connect(String modId, Class<?> anchor) -> RimuMod   // keep in a static field (stored as Object)
 CarveApi: UNTOUCHED; interface Floor{int at(int x,int z)}; interface Surface{BlockState at(int x,int y,int z,BlockState was)} (null=keep)
-  flatten(level, Vec3 centre, double r, Floor, Surface)        line(level, Vec3 start, Vec3 heading, double length, double halfWidth, Floor, Surface)
+  flatten(level, Vec3 centre, double r, Floor, Surface)   line(level, Vec3 start, Vec3 heading, double length, double halfWidth, Floor, Surface)
   column(level,centre,r) slit wedge lens ; keepBlocks(Predicate<BlockState>) global register
   Cut: named(String) keepBlocks() perTick(int) lazy() atOnce(boolean) prepare() ready() cancel() start() tick() tick(double) done() stop() finish()
-  start() self-ticks; prepare() builds early, tick() lands it in one tick. Floors/surfaces run on server thread.
+  start() self-ticks; prepare() builds early, tick() lands it in one tick. Floors/surfaces run on the server thread.
 WardApi.warn(ServerLevel, String modId, Threat.Kind, Vec3 at, double radius, int argb, int leadTicks, int durationTicks) -> boolean
 FilmApi: enableKey(); follow(Entity, Vec3 target)->Subject; pose(Vec3 position, Vec3 lookAt, float fov)->CameraPose;
   cut(int start,int end,Shot.Path); sweep(int start,int end,int blendIn,Shot.Path); film(Subject,String tier,String title,int argb,List<Shot>)->Cutscene;
-  play(Cutscene); active(); time(subject,partial); weight(subject); skip(); stop(subject); hintOnly(modId);
-  holdInput(BooleanSupplier); hideHand(BooleanSupplier)
-  Shot.Path lambda: (s, partial, k) -> CameraPose ; k runs 0..1 over the shot. Subject: feet(partial) eye(partial) target() forward() right()
-  frame(anchor,right,up,forward) aroundTarget(partial,side,up,back); static Subject.orbit(point,pivot,degrees)
+  play(Cutscene); active(); time(subject,partial); weight(subject); skip(); stop(subject); hintOnly(modId); holdInput(BooleanSupplier); hideHand(BooleanSupplier)
+  Shot.Path lambda: (s, partial, k) -> CameraPose ; partial is float, k runs 0..1 over the shot (our helpers take double: widening works for either type).
+  Films.java uses `var` for Shot/Subject/CameraPose so only FilmApi is imported by name. Every film draws Rimulib's title card (tier/title); `hintOnly(modId)` turns all cards off.
 FxApi: stage(String modId)->Stage; Stage.add(Layer)/remove; Layer: void draw(Frame); Frame: pass(String program, Consumer<Uniforms>), screen(), partial()
-  Uniforms: f1 f2 f3 f4 v3(String,Vec3) vec4s texture. ScreenFx fields (reset each frame): shake aberration desaturate zoomBlur flash flashR flashG flashB
-  vignette vignetteR vignetteG vignetteB bloom. Shaders: assets/<mod>/shaders/fx/<name>.fsh, NO #version; given: texCoord fragColor DiffuseSampler DepthSampler Time GTime OutSize scenePosAt
-UiApi: enum Font{DISPLAY,LABEL,MONO}; text(GuiGraphics,Font,String,x,y,argb)->float; centred(...); text(g,font,s,x,y,align,scale,argb); measure(g,font,s,scale); box(g,x,y,w,h,argb); width(g)/height(g)
+  Uniforms: f1 f2 f3 f4 v3(String,Vec3) vec4s texture. ScreenFx fields (reset each frame): shake aberration desaturate zoomBlur flash flashR/G/B vignette vignetteR/G/B bloom.
+  Shaders: assets/<mod>/shaders/fx/<name>.fsh, NO #version; given: texCoord fragColor DiffuseSampler DepthSampler Time GTime OutSize scenePosAt
+UiApi: enum Font{DISPLAY,LABEL,MONO}; overlay(GuiGraphics, Runnable) (ALL UiApi drawing goes inside it; it lays out in its own fixed frame, y = baseline);
+  text(g,Font,String,x,y,argb)->float; centred(...); text(g,font,s,x,y,align,scale,argb) (align 0/0.5/1); measure; box(g,x,y,w,h,argb); width(g)/height(g) = the frame size.
+  So text positions are FRACTIONS of width/height; anything that must line up with the mouse or screen pixels uses vanilla GuiGraphics.
 ```
-Verified-from-compiling-1.21.1-addon patterns (MIT/CC0 "Shooting Star Addition", client): `extends RenderType` to reuse protected state
-shards (RENDERTYPE_LIGHTNING_SHADER, ADDITIVE/own TransparencyStateShard, NO_CULL...); `new BufferBuilder(new ByteBufferBuilder(n), Mode.QUADS, fmt)`;
-`vc.addVertex(x,y,z).setColor(f,f,f,f).setUv(u,v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(l).setNormal(nx,ny,nz)`; `builder.build()` (nullable)
-then `renderType.draw(mesh)`; `RenderLevelStageEvent` (camera = event.getCamera().getPosition(), partial = event.getPartialTick().getGameTimeDeltaPartialTick(true),
-far = minecraft.gameRenderer.getDepthFar()); `RenderType.entityTranslucentEmissive(tex)`; `RenderType.eyes`; payloads via `event.registrar("v")`,
-`StreamCodec.of(encoder,decoder)`, `PacketDistributor.sendToPlayer`. Constructor: `public Mod(IEventBus bus, ModContainer c, Dist d)`; `c.registerConfig(ModConfig.Type.COMMON, SPEC)`.
-Licences of provided example mods: Shooting Star DEMO = All Rights Reserved + obfuscated -> NEVER decompile/copy (declined).
-Shooting Star Addition (1.8.0 MIT, 1.8.1 CC0) and TON 618 (CC0, partly obfuscated) = study OK. Downfall 1.20.1 = MIT (has own Ramiel .dfm model; not used).
+Verified-from-compiling addon patterns (MIT/CC0 "Shooting Star Addition"): `extends RenderType` to reuse protected state shards; `new BufferBuilder(new ByteBufferBuilder(n), Mode.QUADS, fmt)`;
+`vc.addVertex(x,y,z).setColor(..).setUv(..).setOverlay(..).setLight(..).setNormal(..)`; `builder.build()` (nullable) then `renderType.draw(mesh)`; `RenderLevelStageEvent`; payloads via `event.registrar("v")`.
+Licences: Shooting Star DEMO = All Rights Reserved + obfuscated -> NEVER decompile or copy. Shooting Star Addition (MIT/CC0) and TON 618 (CC0, partly obfuscated) = study OK. Downfall 1.20.1 = MIT (own Ramiel model; unused).
+Official MDK (CC0) values now used in the build: moddev plugin 2.0.148, neo_version 21.1.267, Gradle 9.2.1, foojay 1.0.0 (github.com/NeoForgeMDKs/MDK-1.21.1-ModDevGradle).
 
 ## 3. Reference-frame analysis (413 frames; replaces re-viewing them)
-Colours: body deep blue (0.16,0.33,0.95) translucent crystal; plates mint cyan-green (0.35,0.95,0.78); dark (0.05,0.09,0.25); cyan (0.4,0.95,1); core red / magenta in star.
-- DORMANT: octahedron, a vertex points down, spins slowly on vertical axis.
-- DRILL (340-379): lower apex stretches into a thin needle with glowing cyan beads; pink/orange rings + sparks where it meets the ground.
-- LANCE (98-121): octa splits at equator; halves separate vertically and re-form as STEPPED RECTANGULAR SLAB STACKS (3 slabs each, decreasing size), small cap
-  pyramids top/bottom, a spine of ~6 small beads between them, red core in the gap, pink glow. Beam: thin pink->white.
-- CROSS (146-167): halves flatten to plates, fly apart; 6 small cubes form a plus cluster; then 4 long spikes (+X,-X,+Y,-Y in the view plane) with detached
-  spinning end plates/diamonds, pink glow on top plate. Beam (208): thick gold-white, orange fringe, ground footprint is a CROSS (user wants 12+ craters).
-- Reversion (244-263): cross collapses into stacked plates + elongated shard cluster, then snaps back to the octahedron.
-- SUNBURST (417-444): small bright cyan inverted pyramid at centre, ~20 long thin spikes radiating everywhere + floating blue shards, sunburst light rays.
-  Beam: thin MAGENTA-pink line(s) sweeping (447-465).
-- SENTINEL (520-530, clearer_form4): 6 nested square mint plates stacked like pages (slight offsets) in front of core, 3 big blue pieces behind, thin rod with red tip,
-  floating shards to one side. Beam: thick WHITE.
-- SHIELD (505-515): body turned so one big flat face points at the threat; golden thin lines + rainbow hexagon cells when hit.
-- STAR (725-746, clearer_form5): upside-down 5-point star in the plane facing the viewer (one point down, two up), unfolds in 3 stages (bigger each), magenta/pink
-  glowing core with an energy ring. Beam (761-846): huge; pink pressure-disc rings travel along it; mountain erupts orange; debris/smoke streaks along beam direction.
+Colours: body deep blue (0.16,0.33,0.95) translucent crystal; plates mint cyan-green (0.35,0.95,0.78); dark (0.05,0.09,0.25); cyan (0.4,0.95,1); core red / magenta in the star.
+- DORMANT: octahedron, a vertex points down, spins slowly on the vertical axis.
+- DRILL (340-379): the lower apex stretches into a thin needle with glowing cyan beads; pink/orange rings + sparks at the ground.
+- LANCE (98-121): the octa splits at the equator; the halves separate and re-form as two CHUNKY stepped blocks (base slab + a U-shaped raised rim open to the front), small cap pyramids outside,
+  a spine of ~6 beads between them, red core in the gap, pink glow. Beam: thin pink->white.
+- CROSS (146-167): halves flatten and fly apart; 6 small cubes form a plus; then 4 long pyramid ARMS whose points meet at the centre, flat bases outward (+X,-X,+Y,-Y in the view plane), with detached
+  spinning end plates/diamonds beyond. Beam (208): thick gold-white, the ground footprint is a CROSS (user wants 12+ craters).
+- SUNBURST: (user's spec) central glassy octahedron + ring of ~20 small octahedra alternating shield / (long up spike + short down spike), thin spokes. It spins faster and faster while charging, then a sweeping
+  thin MAGENTA beam arcs 360 degrees in a cone (447-465).
+- SENTINEL (520-530): 6 nested square mint plates stacked like pages in front of the core, 3 big blue backing pieces (two pyramids + a prism), a thin rod with a red tip, long blades and chips drifting to one side. Beam: thick WHITE.
+- SHIELD (505-515): one big flat face points at the threat; golden thin lines + rainbow hexagon cells when hit.
+- STAR (725-746): upside-down 5-point star facing the viewer (one point down, two up), unfolds in 3 stages (charge ticks 1/80/160), magenta core with an energy ring. Beam (761-846): huge; pink pressure-disc rings travel along it;
+  the mountain erupts orange; debris/smoke along the beam.
 - URCHIN (646-648, 915-963): dark navy spikes in all directions, exposed red core blobs, violet glow. Used for stun + death.
-- Hit by railcannon (627-648, 870-892): beam cyan-green with white core, Ramiel flashes pale then dark blue; ring of purple energy at charge (870).
-- Explosions (484-500): chain/ring of glowing white-gold spheres, then huge orange fireballs. Ground scars glow red/orange.
-- Scope HUD (547-607, 812-815): circular reticle, orange HUD text, NIGHT/ENHANCED sight mode labels, green triangle lock markers, red dashed diagonal lines.
+- Reversion (244-263): the form collapses into stacked plates + an elongated shard cluster, then snaps back to the octahedron. This is now the universal reversion for every attack.
+- Hit by railcannon (627-648, 870-892): beam cyan-green with white core, Ramiel flashes pale then dark blue; ring of purple energy at the charge (870). Explosions (484-500): glowing white-gold spheres then orange fireballs; ground scars glow red/orange.
+- Scope HUD (547-607): circular reticle, orange HUD text, NIGHT/ENHANCED sight labels, green triangle lock markers, red dashed diagonals.
 
 ## 4. Gameplay spec (implemented in server code)
-Idle: slow spin, never tracks anyone. Shield (phase 1) when threatened & idle: SHIELD form faces last hit; durability 1500; projectile/explosion hits wear it;
-break => 600 ticks vulnerable. Attacks (cooldown 10-20 s / aggression): Lance 40%, Cross 20%, Sunburst 15-40% (crowds near), Sentinel 25%.
-Stages MORPH(cutscene)/CHARGE/PAUSE(aim locked + red telegraph beam)/FIRE/RECOVER(core exposed)/REVERT. ImpactStrike (own objective when nobody is around):
-needle extends+stabs, 25 s charge with red blast-zone ring + action-bar warnings + alarm, crater pre-built via Cut.prepare() and landed with Cut.tick(), then walks 350-600 blocks away.
-Damage >=8% max HP (or any core hit) during charge cancels it (setting). Mobs: animals/villagers flee (speed boost); skeletons/pillagers/illusioners/blazes/ghasts shoot at it.
-Commands: /ramiel summon | summon_here | kill | phase2 | heal | settings (op 2).
-
-Immediate-mode drawing rule (from the addon): keep ONE static `ByteBufferBuilder`, make a new `BufferBuilder(bytes, Mode, format)` per draw, `mesh = bb.build()` (nullable),
-`renderType.draw(mesh)`; only one builder open at a time (flush before starting another). Camera-relative vertices work at RenderLevelStageEvent.Stage.AFTER_SKY / AFTER_PARTICLES.
-Sounds: layered vanilla sounds live in `world/Sfx.java` (slam, deflect, laser, laserHum, boom). The slam plays when an attack's REVERT ends back in DORMANT (user request).
-Custom synthesized .ogg (alarm charge beam boom morph rail shield) also exist and are played by `playLoud(ModRegistry.SND_*)`; user prefers vanilla layers where they sound better.
-
-## 5. FILE STATUS  (D = done, T = todo)  — java under src/main/java/dev/ramiel
-D RamielMod, ModRegistry, RamielConfig, Setting, Form, net/{Payloads,FxKind,FilmKind}
-D entity/{RamielEntity, RamielPart, RamielBrain, Orientation(+forAngles), RamielHitTest, BeamKind}
-D entity/attack/{Attack, BeamAttack, Lance, Cross, Sunburst, Sentinel, Star, Stun, ImpactStrike}
-D world/{Damage, BeamCaster, Destruction, ChunkAnchor, RamielTracker, Wards, Sfx, RamielSpawner, HitResolver, RailcannonShot, ServerEvents}
-D ai/{FleeRamielGoal, ShootRamielGoal, MobHooks}   item/{MiniRamielItem, RailcannonItem, PlasmaCellItem, AngelCoreItem}
-D client/model/{Brick, FormPoses, RamielModel, RamielMesh}   client/render/{RamielRenderTypes, RamielRenderer, MiniRamielRenderer}
-D client/fx/{Draw, FxState, FxRender, GroundFx, BeamFx, GlowFx, ShieldFx, SpaceScene, FarRender, ScreenEffects}   client/ClientNet
-D resources: assets/ramiel/shaders/fx/ramiel_impact.fsh ; textures (entity/crystal, fx/earth, item/{plasma_cell,angel_core,railcannon}) ; sounds/*.ogg (7)
-D tools/gen_assets.py  (regenerates every texture + sound: `python3 tools/gen_assets.py`)
-D build.gradle, settings.gradle, gradle.properties, META-INF/neoforge.mods.toml, pack.mcmeta
-T client/RamielClient  -> `public static void init(IEventBus modBus)` (called from RamielMod when Dist is client). Must register:
-    modbus: EntityRenderersEvent.RegisterRenderers (ModRegistry.RAMIEL -> RamielRenderer::new); RegisterClientExtensionsEvent (Mini item -> MiniRamielRenderer BEWLR);
-            RegisterGuiLayersEvent (WarningHud, ScopeLayer)
-    game bus: RenderLevelStageEvent -> FxRender.render(event); ClientTickEvent.Post -> FxRender.tick(); ClientPlayerNetworkEvent.LoggingOut -> FxRender.clear();
-            ComputeFovModifierEvent (scope zoom); RenderHandEvent (cancel while scoped); RenderGuiLayerEvent.Pre (cancel crosshair while scoped)
-    also: ScreenEffects.init(); FilmApi.enableKey(); FilmApi.holdInput(()->Films.holdsInput()); FilmApi.hideHand(()->Films.holdsInput())
-T client/film/Films -> `public static void play(int kind, int entityId)` (ClientNet calls it) + `static boolean holdsInput()`. One film per FilmKind (see sec 5 table).
-    Camera paths: `(s, partial, k) -> FilmApi.pose(pos, lookAt, fov)`; helper params for k must be `double`, partial `float`. Subject = FilmApi.follow(entity, playerPos).
-    INTRO must use the entity's `arrival(partial)` + `arrivalOffsetY(partial)` (model is drawn that many blocks ABOVE the entity); camera altitude > 900 above sea level
-    automatically switches SpaceScene on. Attack-morph films last the MORPH stage (50-100 ticks) and end BEFORE charge.
-T client/gui/RamielSettingsScreen(double[] values, boolean canEdit): 2 columns over `Setting.values()`; slider (min,max,step) or on/off button if `isToggle()`;
-    tooltip = Setting.help; on change/Save send `PacketDistributor.sendToServer(new Payloads.SettingsSet(double[]))`; read-only note when !canEdit; title via UiApi.
-T client/gui/ScopeLayer (railcannon scope: black outside a circle, reticle ticks, red dashed diagonals, orange HUD text, charge %, NIGHT/ENHANCED label, cells left)
-    active when `mc.player.isUsingItem() && useItem is RailcannonItem`; `player.getTicksUsingItem()` = charge ticks (full = RailcannonItem.FULL_CHARGE = 40).
-T client/gui/WarningHud: reads public `FxState.zones` (Map<Integer,Zone>: centre, radius, end) + `FxState.now`; if the player is inside: big red text via UiApi
-    ("BLAST ZONE", seconds left, "RUN") — the action-bar message and screen vignette already exist.
-T resources: lang/en_us.json (keys below) ; sounds.json (7 events -> ogg; optional vanilla aliases via {"type":"event"}) ; models/item/{mini_ramiel (parent builtin/entity, gui_light front, display),
-    railcannon (3D elements model using textures/item/railcannon.png 4x4 swatches), plasma_cell & angel_core (item/generated)} ; data/ramiel/recipe/*.json ; data/ramiel/damage_type/{railcannon,angel_beam}.json ;
-    data/minecraft/tags/damage_type/bypasses_armor.json (+ railcannon).  1.21.1 folder names are SINGULAR (recipe, damage_type, tags/damage_type). Recipes planned:
-    railcannon (2 netherite ingot, 1 beacon, 2 diamond block, 2 iron block, 3 redstone block), plasma_cell x2 (nether star+diamond+blaze powder+ender pearl, shapeless),
-    plasma_cell cheap (angel_core + ...), mini_ramiel (nether star + lapis blocks + diamonds).
-T RailcannonShot should also call Sfx.laser(level, pos, 1.2f) (not hooked yet).   T docs: README.md, ARCHITECTURE.md, TUNING.md
-Lang keys used by code: entity.ramiel.ramiel itemGroup.ramiel ramiel.settings.saved ramiel.warn.blast(%s sec,%s radius) ramiel.warn.near(%s) ramiel.summon.{dimension,already,water,land}
-ramiel.rail.{no_ammo,charged,unstable} item.ramiel.{mini_ramiel,railcannon,plasma_cell,angel_core} (+ .tip1/.tip2 on first two, .tip on plasma_cell/angel_core).
-FxKind: 1 IMPACT_FRAME(a=ticks) 2 SHOCKWAVE(a=radius,b=ticks) 3 BLAST(a=radius) 4 SCAR(a=radius,b=lifetime) 5 WARN_ZONE(a=radius,b=ticksLeft,f1=zoneId; b<=0 removes)
-6 SHIELD_HIT((a,b,c)=outward dir,f1) 7 SHIELD_BREAK 8 BEAM_IMPACT((a,b,c)=dir,f1=size) 9 DRILL_SPARK(a=size) 10 SHAKE(a=strength,b=ticks) 11 RAIL_BEAM(pos=start,(a,b,c)=end,f1=width,f2=ticks) 12 POOF(a=radius).
+Idle: slow spin, never tracks anyone. Shield (phase 1) when threatened & idle: SHIELD form faces the last hit; durability 1500; projectile/explosion hits wear it; broken => 600 ticks vulnerable.
+Attacks (cooldown 10-20 s / aggression): Lance 40%, Cross 20%, Sunburst 15-40% (crowds near), Sentinel 25%. Stages MORPH(cutscene)/CHARGE/PAUSE(aim locked + red telegraph)/FIRE/RECOVER(core exposed)/REVERT
+(Lance 40, Cross/Sunburst/Sentinel 50, Drill 80 ticks). ImpactStrike (its own objective when nobody is around): the needle extends and stabs, 25 s charge with red blast-zone ring + HUD + alarm, the crater is pre-built
+(`Cut.prepare()`, landed with `Cut.tick()`), then it walks 350-600 blocks away. Damage >= 8% max HP (or any core hit) during the charge cancels it (setting). Mobs: animals/villagers flee (speed boost);
+skeletons/pillagers/illusioners/blazes/ghasts shoot at it. Commands: `/ramiel summon | summon_here | kill | phase2 | heal | settings` (op 2).
+Shockwaves (strength x setting): impact strike R=1.9 x blast radius, 80 ticks, 1.6, trees; star beam first impact R220/90t/2.0 with down-range bias 0.4, trees; muzzle R120/50t/1.2, trees; beam pulses R40/24t/0.45;
+unfolding pulses R60-140/30t/0.5; stun R90/40t/0.9; Lance R28/24t/0.45; arrival slam R140/70t/0.9, trees; death R180/90t/1.4, trees.
+Immediate-mode drawing rule: ONE static `ByteBufferBuilder`, a new `BufferBuilder(bytes, Mode, format)` per draw, `mesh = bb.build()` (nullable), `renderType.draw(mesh)`; one builder open at a time.
+Sounds: layered vanilla sounds in `world/Sfx.java`; custom synthesized .ogg (alarm charge beam boom morph rail shield) played by `playLoud(ModRegistry.SND_*)`; the slam plays when REVERT ends back in DORMANT.
+FxKind: 1 IMPACT_FRAME(a=ticks) 2 SHOCKWAVE(a=radius,b=ticks) 3 BLAST(a=radius) 4 SCAR 5 WARN_ZONE 6 SHIELD_HIT 7 SHIELD_BREAK 8 BEAM_IMPACT 9 DRILL_SPARK 10 SHAKE 11 RAIL_BEAM 12 POOF.
 Film kinds: 0 INTRO 1 LANCE 2 CROSS 3 SUNBURST 4 SENTINEL 5 STUN 6 UNFOLD 7 DEATH 8 DRILL 9 UNFOLD_FIRST. Beam kinds: 0 none 1 LANCE 2 CROSS 3 SUNBURST 4 SENTINEL 5 STAR 9 TELEGRAPH.
-Entity getters the client uses: form() formFrom() morph(p) spin(p) aimYaw(p) aimPitch(p) aimDir(p) charge(p) coreAnim(p) arrival(p) arrivalOffsetY(p) coreOpen() shieldUp()
-shieldRatio() drillLen() phase() beamKind() beamLen() beamT() deathTicks() centre() healthRatio() isBusy(); constants R, CORE_BOX, CORE_RADIUS, ARRIVAL_TICKS, DEATH_TICKS.
-Checks done in this chat: `javac -proc:none` over all 59 files = ZERO syntax errors; every unresolved symbol is a Minecraft/NeoForge/rimulib type (not installed in the sandbox) except the
-3 TODO client classes above. No methods of my own classes are missing. Nothing has been compiled against NeoForge or run in-game.
+Recipes: railcannon `DNR/IBI/RND` (diamond block, netherite ingot, redstone block, iron block, beacon); plasma cell x2 (nether star + diamond + blaze powder + ender pearl, shapeless); x6 from an angel core (+ blaze powder + ender pearl);
+mini ramiel `LDL/DSD/LDL` (lapis block, diamond, nether star).
 
-## 6. NEXT PHASES (re-numbered; old P1 + P2 are finished)
-P2  Client wiring + UI + cutscenes: RamielClient, Films, RamielSettingsScreen, ScopeLayer, WarningHud (spec above). Opens only: HANDOFF.md, ClientNet, FxState, RamielEntity(getters), Setting, Payloads.
-P3  Resources + docs: lang, sounds.json, item/block models, recipes, damage types + tags, README/ARCHITECTURE/TUNING, railgun Sfx hook, optional vanilla-sound aliases.
-P4  Integration on the user's machine: user installs rimulib >= 1.2.2 (docs: 1.2.4) as libs/rimulib.jar, builds, pastes compile errors; fix loop; first in-game test; balance pass.
-Suggested prompt: "Read HANDOFF.md and unzip ramiel-mod-snapshot.zip. Do Phase 2 only; list the files you open."
+## 5. FILE STATUS: everything below is WRITTEN. Nothing is compiled or run yet.
+Java under src/main/java/dev/ramiel (69 files):
+RamielMod ModRegistry RamielConfig Setting Form | net/{Payloads FxKind FilmKind} |
+entity/{RamielEntity RamielPart ToppleEntity RamielBrain Orientation RamielHitTest BeamKind} |
+entity/attack/{Attack BeamAttack LanceAttack CrossAttack SunburstAttack SentinelAttack StarAttack StunAttack ImpactStrike} |
+world/{Damage BeamCaster Destruction ChunkAnchor RamielTracker Wards Sfx RamielSpawner HitResolver RailcannonShot ServerEvents Shockwave ShockMath TreeScan} | ai/{FleeRamielGoal ShootRamielGoal MobHooks} |
+item/{MiniRamielItem RailcannonItem PlasmaCellItem AngelCoreItem} | client/{RamielClient ClientNet} | client/model/{Brick FormPoses RamielModel RamielMesh} |
+client/render/{RamielRenderer MiniRamielRenderer RamielRenderTypes ToppleRenderer} | client/fx/{Draw FxState FxRender GroundFx BeamFx GlowFx ShieldFx SpaceScene FarRender ScreenEffects} |
+client/film/Films | client/gui/{ScopeLayer WarningHud RamielSettingsScreen}
+Resources: lang/en_us.json, sounds.json (7 events), models/item/{mini_ramiel (builtin/entity), railcannon (3D elements on the 4x4 swatch texture), plasma_cell, angel_core}, textures, shaders/fx/ramiel_impact.fsh,
+data/ramiel/{recipe (4), damage_type (railcannon, angel_beam)}, data/minecraft/tags/damage_type/{bypasses_armor,bypasses_shield}. 1.21.1 folder names are SINGULAR (recipe, damage_type).
+Build: build.gradle settings.gradle gradle.properties gradlew(.bat) gradle/wrapper (MDK values), libs/README.txt (put rimulib.jar there), META-INF/neoforge.mods.toml, pack.mcmeta, .gitignore
+Docs: README ARCHITECTURE TUNING docs/SHOCKWAVE.md docs/FIRST_BUILD.md docs/previews/*.png
 
-## 7. KNOWN RISKS (check first on compile / first run)  — all untested
-1. rimulib jar must be >= 1.2.2 at libs/rimulib.jar (the user's 1.2.1 has no API). `RimulibApi.connect` result stored as Object.
-2. `Mob.goalSelector` visibility (MobHooks): NeoForge normally exposes it; else add an access transformer.
-3. `ModConfigSpec.ConfigValue.save()` (Setting.apply); `DoubleValue.set(double)` boxing.
-4. `FallingBlockEntity.dropItem` public field + `fall(Level,BlockPos,BlockState)` static (1.21.1).
-5. 1.21 projectile constructors: LargeFireball(level,mob,Vec3,int), SmallFireball(level,mob,Vec3) (ShootRamielGoal) — adjust on compile error.
-6. PartEntity API (`getParent`, `getParts`, `isMultipartEntity`, `setId` override).
-7. Shot.Path lambda types (keep k as double-accepting helpers); FilmApi.pose fov float.
-8. gradle `neo_version` + moddev plugin version are guesses: copy the 1.21.1 MDK values.
-9. Shader packs (Iris/Oculus) may break custom immediate-mode drawing; test with shaders OFF first.
-10. `Sfx.java` assumes SoundEvents.* constants other than GENERIC_EXPLODE are plain SoundEvent (not Holder). If a constant is a Holder, add `.value()`.
-11. ScreenEffects uses rimulib ScreenFx field names from the docs: shake flash aberration vignette vignetteR/G/B bloom zoomBlur; `frame.partial()`, `frame.pass(name, u->{u.f1(..)})`.
-12. Client API assumptions: `Camera.getLeftVector()/getUpVector()`, `Level.addParticle(opts, force, x,y,z,vx,vy,vz)`, `ClientLevel.entitiesForRendering()`,
-    `RenderType.create(...)` + RenderStateShard constants (RENDERTYPE_LIGHTNING_SHADER, NO_DEPTH_TEST, COLOR_WRITE, LIGHTMAP, OVERLAY), `PoseStack.Pose` overloads of addVertex/setNormal.
-13. Balance numbers (HP 3000, 25 s charge, craters, damage) are first guesses; tune via the settings screen / TUNING.md after first run.
+## 6. PHASES
+P1-P3: DONE. (P2 = client wiring, UI, cutscenes. P3 = resources, docs, the shockwave, the model work.)
+
+**P4: first compile and first run (on the USER's machine; Claude fixes what they paste)**
+The user does (docs/FIRST_BUILD.md says the same in plain words): JDK 21; unzip; Rimulib >= 1.2.2 (NeoForge 1.21.1) saved as `libs/rimulib.jar`; run `python3 tools/collect_errors.py` (it builds, then writes build-errors.txt) and paste that file.
+Claude does:
+ 1. Read the report. Fix section 1 of it (unresolved imports) FIRST: they cause most of the other errors. Look the real class up (NeoForge source on GitHub); do not guess twice.
+ 2. Then the "other errors", batched by file. Ask for a rerun after each batch. Write the API facts learned into section 7.
+ 3. When it compiles: `./gradlew runClient` (a crash -> `python3 tools/collect_errors.py --game run/logs/latest.log`), then the smoke tests below. Also run `./gradlew runServer` once (no client classes may load).
+Smoke tests, in order (creative world, cheats on, shaders OFF): (a) boots; the log shows the Rimulib connect; items + creative tab; recipes craft. (b) `/ramiel summon_here`: Ramiel appears, spins, translucent, no black/purple faces.
+(c) `/ramiel summon` with the Mini item: intro cutscene from space, lands over water. (d) provoke it: each form morphs with moving pieces, the revert snaps shut, slam sound. (e) `/ramiel phase2`: stun spikes, urchin -> star, star beam,
+the shockwave pushes you, trees fall, ring + camera shake. (f) railcannon: scope, charge, shot, 2 core hits kill. (g) leave it alone: drill, blast-zone HUD + ring, crater. (h) Shift+RMB settings screen: tabs, sliders, save.
+(i) hold transforms of mini_ramiel and railcannon in first and third person (tune `display` in models/item/*.json). (j) far render (walk 300 blocks away). (k) `runServer` boots.
+Exit: it compiles, client and server boot, and (b)-(h) work. Then tell the user to say "phase done" so HANDOFF and the zip get updated.
+
+**P5: in-game polish and balance**: item display transforms, camera shots (Films), HP/damage/charge numbers (TUNING.md), toppled-tree leaf tint, performance (147 bricks, shockwave scans), shader packs (Iris),
+mod compatibility, release packaging (authors, license, logo, version, `./gradlew build` jar). Ideas not built: crushing entities under a landing tree, diagonal tree falls, dust along the ring.
+
+## 7. KNOWN RISKS: all unverified until P4. Quick fixes are in the last paragraph.
+1. Rimulib jar >= 1.2.2 at `libs/rimulib.jar`; the `RimulibApi.connect` result is stored as Object. 2. `Mob.goalSelector` visibility (MobHooks): add an access transformer if it is private.
+3. `ModConfigSpec.ConfigValue.save()` (Setting.apply); `DoubleValue.set(double)` boxing. 4. `FallingBlockEntity.dropItem` + `fall(Level,BlockPos,BlockState)` (1.21.1). 5. 1.21 projectile constructors in ShootRamielGoal.
+6. PartEntity API (`getParent`, `getParts`, `isMultipartEntity`, `setId`). 7. Shot.Path lambda types / `FilmApi.pose` fov float. 8. (DONE: gradle values now come from the MDK.) 9. Shader packs may break immediate-mode drawing: test shaders OFF first.
+10. `Sfx.java` assumes SoundEvents.* constants are plain SoundEvent (GENERIC_EXPLODE is a Holder: add `.value()` if needed). 11. ScreenEffects uses ScreenFx field names from the docs (shake flash aberration vignette* bloom zoomBlur).
+12. Client API assumptions: `Camera.getLeftVector()/getUpVector()`, `Level.addParticle(opts, force, ...)`, `ClientLevel.entitiesForRendering()`, `RenderType.create(...)` + RenderStateShard constants, `PoseStack.Pose` overloads of addVertex/setNormal.
+13. Balance numbers are first guesses.
+14. Phase 2 UI/event APIs: `RegisterGuiLayersEvent#registerAboveAll(ResourceLocation, LayeredDraw.Layer)`, `Layer#render(GuiGraphics, DeltaTracker)`, `RenderGuiLayerEvent.Pre#getName` + `VanillaGuiLayers.CROSSHAIR`,
+    `ComputeFovModifierEvent` (getPlayer/getNewFovModifier/setNewFovModifier), `RenderHandEvent`, `ClientTickEvent.Post`, `ClientPlayerNetworkEvent.LoggingOut`, `RegisterClientExtensionsEvent#registerItem(IClientItemExtensions, Item...)`,
+    `AbstractSliderButton` (constructor, protected `value`, applyValue/updateMessage), `Button` protected constructor + `DEFAULT_NARRATION`, `Screen#renderBackground/rebuildWidgets`, `GuiGraphics#drawWordWrap/guiWidth`, `Tooltip.create`, `Player#getViewYRot`.
+15. Phase 3 APIs: `LevelTickEvent.Post` and `ServerStoppingEvent` packages; `Level#holderLookup(Registries.BLOCK)` + `NbtUtils.readBlockState`; `Entity#hurtMarked/hasImpulse`; `EntityType.Builder.clientTrackingRange/updateInterval/noSummon`;
+    `Heightmap.Types.MOTION_BLOCKING_NO_LEAVES`; `LeavesBlock.DISTANCE/PERSISTENT`; `Block.UPDATE_SUPPRESS_DROPS`; `ServerLevel#isLoaded(BlockPos)`; `BlockRenderDispatcher#renderSingleBlock` (5 args); `EntityRendererProvider.Context#getBlockRenderDispatcher`.
+16. ToppleEntity: the tree data syncs through a synched CompoundTag right after the spawn packet (the renderer waits for it); leaves are drawn with the default foliage colour; leaves that land inside terrain are lifted up to 3 blocks (they visibly settle upward).
+17. Item model JSON: the `neoforge_data` glow keys may need renaming; every `display` transform is a guess. 18. Velocities above ~3 b/t may be rubber-banded (the ShockMath caps are conservative).
+19. Title cards: every film shows Rimulib's title card, which may be too frequent on attack morphs (`FilmApi.hintOnly(MODID)` switches them all off). The settings screen needs ~218 GUI units of height (clips near 720p at GUI scale 4).
+
+Quick fixes: `package X does not exist` on net.neoforged.* -> the class moved or was renamed in 21.1: find it in NeoForge's source (github.com/neoforged/NeoForge) and fix the import. `cannot find symbol ... of type <a Minecraft class>` -> 1.21.1 names the method differently: read that class's source.
+Anything under `cyou.rimuru.rimulib` -> the jar is missing, too old, or the package differs: list its classes (`unzip -l libs/rimulib.jar | grep mc1211`). `Could not resolve net.neoforged:neoforge` -> check `neo_version` in gradle.properties.
+`Unsupported class file / Java version` -> JDK 21 is needed. NoClassDefFoundError `net/minecraft/client` on a server -> a client class leaked (only RamielClient may touch client code). Black or purple faces -> RenderType or texture problem; try shaders OFF.

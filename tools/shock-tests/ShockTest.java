@@ -88,7 +88,19 @@ public class ShockTest {
         for (int i = 0; i < ta.count; i++) sa.add(ta.x[i] + "," + ta.y[i] + "," + ta.z[i]);
         for (int i = 0; i < tb.count; i++) if (sa.contains(tb.x[i] + "," + tb.y[i] + "," + tb.z[i])) overlap = true;
         check("two touching trees stay separate: one trunk each", ta.logs == 5 && tb.logs == 5, "A logs=" + ta.logs + " B logs=" + tb.logs);
-        check("...and every leaf goes to its nearest trunk (overlap only where both are equally near)", true, (overlap ? "some tied leaves are shared" : "no shared leaves") + "; A=" + ta.count + " B=" + tb.count);
+        boolean nearest = true; int checkedLeaves = 0;
+        for (int pass = 0; pass < 2; pass++) {
+            TreeScan.Tree mine = pass == 0 ? ta : tb;
+            int ownX = pass == 0 ? 0 : 5, otherX = pass == 0 ? 5 : 0;
+            for (int i = 0; i < mine.count; i++) {
+                if (mine.kind[i] != TreeScan.Grid.LEAF) continue;
+                int dOwn = 99, dOther = 99;
+                for (int y = 0; y < 5; y++) { dOwn = Math.min(dOwn, Math.abs(mine.x[i] - ownX) + Math.abs(mine.y[i] - y) + Math.abs(mine.z[i])); dOther = Math.min(dOther, Math.abs(mine.x[i] - otherX) + Math.abs(mine.y[i] - y) + Math.abs(mine.z[i])); }
+                checkedLeaves++;
+                if (dOwn > dOther) nearest = false;
+            }
+        }
+        check("...and every leaf goes to its nearest trunk (" + checkedLeaves + " leaves checked)", nearest && checkedLeaves > 30, "");
 
         World cabin = new World();
         for (int x = 0; x < 6; x++) for (int y = 0; y < 4; y++) { cabin.log(x, y, 0); cabin.log(x, y, 5); }

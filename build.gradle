@@ -1,11 +1,13 @@
 plugins {
     id 'java-library'
-    id 'net.neoforged.moddev' version '2.0.78'
+    id 'net.neoforged.moddev' version '2.0.148'
 }
 
 version = mod_version
 group = mod_group_id
 base { archivesName = mod_id }
+
+tasks.named('wrapper', Wrapper).configure { distributionType = Wrapper.DistributionType.BIN }
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 

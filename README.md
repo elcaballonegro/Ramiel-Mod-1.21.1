@@ -33,4 +33,5 @@ Weak point: the red core, exposed while charging and recovering. Shield (phase 1
 Open with Sneak + right click on the Mini Ramiel, or `/ramiel settings`. Saved to `ramiel-common.toml`. See TUNING.md.
 
 ## Build
-`./gradlew build` (copy `neo_version` and the moddev plugin version from the 1.21.1 MDK if the guessed ones fail). See ARCHITECTURE.md.
+First time: read `docs/FIRST_BUILD.md`. In short: JDK 21, Rimulib >= 1.2.2 saved as `libs/rimulib.jar`, then `./gradlew build` (or `python3 tools/collect_errors.py` for a short pasteable error report).
+`./gradlew runClient` / `runServer` start the game. Layout and design: ARCHITECTURE.md, TUNING.md, docs/SHOCKWAVE.md. Project memory for the AI-assisted workflow: HANDOFF.md.
