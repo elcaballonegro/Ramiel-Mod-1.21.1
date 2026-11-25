@@ -50,14 +50,14 @@ public class RamielSettingsScreen extends Screen {
     // ---- content ------------------------------------------------------------------------------
     private static final String[] TAB_NAMES = {"DESTRUCTION", "COMBAT", "BEHAVIOUR", "SYSTEM"};
     private static final String[] TAB_TEXT = {
-            "The impact strike drills in, charges with a warning, then detonates. These set how much world it scars.",
-            "How tough and deadly Ramiel is. Railcannon shots ignore the shield and take a fixed share of its health.",
+            "The impact strike drills in, charges with a warning, then detonates. These set how much world it scars, and whether trees fall.",
+            "How tough and deadly Ramiel is, and how hard its shockwaves throw you. Railcannon shots ignore the shield.",
             "Who Ramiel notices, and how the rest of the world reacts to it.",
             "Cutscenes, the distant-horizon render, and chunk loading so Ramiel works while nobody is near."
     };
     private static final Setting[][] TABS = {
-            {Setting.DESTRUCTION, Setting.DEBRIS, Setting.BLAST_RADIUS, Setting.BLAST_SECONDS, Setting.INTERRUPT},
-            {Setting.DAMAGE, Setting.HEALTH, Setting.AGGRESSION, Setting.SPEED, Setting.PHASE2_COOLDOWN},
+            {Setting.DESTRUCTION, Setting.DEBRIS, Setting.BLAST_RADIUS, Setting.BLAST_SECONDS, Setting.INTERRUPT, Setting.TREES_FALL},
+            {Setting.DAMAGE, Setting.HEALTH, Setting.AGGRESSION, Setting.SPEED, Setting.PHASE2_COOLDOWN, Setting.SHOCKWAVE},
             {Setting.AGGRO_RADIUS, Setting.IGNORE_PLAYERS, Setting.MOBS_FLEE, Setting.MOBS_ATTACK},
             {Setting.CUTSCENES, Setting.FAR_RENDER, Setting.CHUNK_ANCHOR}
     };

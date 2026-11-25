@@ -27,6 +27,8 @@ public final class ServerEvents {
         NeoForge.EVENT_BUS.addListener(ServerEvents::onJoin);
         NeoForge.EVENT_BUS.addListener(ServerEvents::onLeave);
         NeoForge.EVENT_BUS.addListener(ServerEvents::onCommands);
+        NeoForge.EVENT_BUS.addListener(Shockwave::onLevelTick);
+        NeoForge.EVENT_BUS.addListener(Shockwave::onServerStopping);
 
         // Tell Rimulib which blocks Ramiel's cuts must never remove (bedrock, end portal frames...).
         // Each cut opts in with .keepBlocks().

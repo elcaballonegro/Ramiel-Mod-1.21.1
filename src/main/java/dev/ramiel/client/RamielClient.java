@@ -10,6 +10,7 @@ import dev.ramiel.client.gui.ScopeLayer;
 import dev.ramiel.client.gui.WarningHud;
 import dev.ramiel.client.render.MiniRamielRenderer;
 import dev.ramiel.client.render.RamielRenderer;
+import dev.ramiel.client.render.ToppleRenderer;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.BlockEntityWithoutLevelRenderer;
 import net.neoforged.bus.api.IEventBus;
@@ -64,6 +65,7 @@ public final class RamielClient {
 
     private static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(ModRegistry.RAMIEL.get(), RamielRenderer::new);
+        event.registerEntityRenderer(ModRegistry.TOPPLE.get(), ToppleRenderer::new);
     }
 
     private static void registerItemExtensions(RegisterClientExtensionsEvent event) {

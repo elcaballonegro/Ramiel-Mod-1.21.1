@@ -70,6 +70,13 @@ public final class RamielConfig {
             .comment("How many blocks above the ground the centre of Ramiel hovers.")
             .defineInRange("hoverHeight", 84.0, 40.0, 200.0);
 
+    public static final ModConfigSpec.DoubleValue SHOCKWAVE = B
+            .comment("Strength of the pressure wave from huge explosions: it throws players and mobs back. 0 = off.")
+            .defineInRange("shockwave", 1.0, 0.0, 3.0);
+    public static final ModConfigSpec.BooleanValue TREES_FALL = B
+            .comment("Shockwaves knock trees over (needs destruction > 0, because it changes the world).")
+            .define("treesFall", true);
+
     public static final ModConfigSpec SPEC = B.build();
 
     private RamielConfig() {}
@@ -94,6 +101,8 @@ public final class RamielConfig {
     public static int farRange() { return i(FAR_RANGE); }
     public static boolean chunkAnchor() { return b(CHUNK_ANCHOR); }
     public static double hover() { return d(HOVER); }
+    public static double shockwave() { return d(SHOCKWAVE); }
+    public static boolean treesFall() { return b(TREES_FALL); }
 
     private static double d(ModConfigSpec.DoubleValue v) {
         try { return v.get(); } catch (IllegalStateException notLoaded) { return v.getDefault(); }

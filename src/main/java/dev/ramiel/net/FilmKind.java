@@ -26,7 +26,7 @@ public final class FilmKind {
     /** Only players within this many blocks (horizontally) get the cutscene. */
     public static double range(int kind) {
         switch (kind) {
-            case INTRO: return 900;
+            case INTRO: return 480;          // entity tracking range is ~512 blocks: further than that there is no Ramiel to film
             case DEATH: case STUN: case UNFOLD_FIRST: return 500;
             default: return 260;
         }

@@ -65,6 +65,7 @@ public class StarAttack extends BeamAttack {
         if (s == Stage.CHARGE && (tick == 1 || tick == 80 || tick == 160)) {
             r.playLoud(ModRegistry.SND_MORPH.get(), 30f, 0.6f + 0.2f * (tick / 80));
             r.fx(FxKind.SHOCKWAVE, r.centre(), 60 + 40 * (tick / 80), 30);
+            dev.ramiel.world.Shockwave.launch(r.serverLevel(), new Vec3(r.getX(), r.groundY(), r.getZ()), 60 + 40 * (tick / 80), 30, 0.5, false, r);
         }
     }
 
@@ -73,6 +74,14 @@ public class StarAttack extends BeamAttack {
         var level = r.serverLevel();
         Vec3 origin = r.centre();
         r.fx(FxKind.IMPACT_FRAME, origin, 6, 0);
+        // the pressure wave: a muzzle blast under Ramiel, and the big one where the beam meets the ground (thrown down-range)
+        Vec3 below = new Vec3(origin.x, r.groundY(), origin.z);
+        r.fx(FxKind.SHOCKWAVE, below, 120, 50);
+        dev.ramiel.world.Shockwave.launch(level, below, 120, 50, 1.2, true, r);
+        if (res.hitSolid()) {
+            r.fx(FxKind.SHOCKWAVE, res.end(), 220, 90);
+            dev.ramiel.world.Shockwave.launch(level, res.end(), dev.ramiel.world.Shockwave.along(dir, 0.4), 220, 90, 2.0, true, r);
+        }
         if (RamielConfig.destruction() <= 0.001) return;
 
         // horizontal footprint of the beam, and how steeply it falls
@@ -115,7 +124,10 @@ public class StarAttack extends BeamAttack {
 
     @Override
     protected void onBeamTick(int t, BeamCaster.Result res, Vec3 dir) {
-        if (t % 10 == 0) r.fx(FxKind.SHOCKWAVE, res.end(), 40, 24);
+        if (t % 10 == 0) {
+            r.fx(FxKind.SHOCKWAVE, res.end(), 40, 24);
+            if (res.hitSolid()) dev.ramiel.world.Shockwave.launch(r.serverLevel(), res.end(), dev.ramiel.world.Shockwave.along(dir, 0.3), 40, 24, 0.45, false, r);
+        }
         if (t == 0) r.fx(FxKind.BLAST, res.end(), 50, 0);
     }
 }

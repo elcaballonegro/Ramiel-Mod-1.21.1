@@ -36,7 +36,7 @@ public class RamielRenderer extends EntityRenderer<RamielEntity> {
         float time = e.tickCount + partial;
         float dropY = (float) e.arrivalOffsetY(partial);
 
-        Brick[] bricks = RamielModel.shared().compute(e.formFrom(), e.form(), e.morph(partial), time,
+        Brick[] bricks = RamielModel.shared().computeFor(e.getId(), e.formFrom(), e.form(), e.morph(partial), time,
                 e.charge(partial), e.drillLen() / (float) RamielEntity.R, e.coreAnim(partial));
         Quaternionf orient = Orientation.of(e, partial);
 

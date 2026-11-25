@@ -41,7 +41,11 @@ public enum Setting {
     FAR_RENDER("Horizon render", "Draw a simplified Ramiel for players too far away to load it.",
             0.0, 1.0, 1.0, () -> RamielConfig.farRender() ? 1 : 0, v -> RamielConfig.FAR_RENDER.set(v >= 0.5)),
     CHUNK_ANCHOR("Keep chunks loaded", "Keep chunks around Ramiel loaded so it works while nobody is near.",
-            0.0, 1.0, 1.0, () -> RamielConfig.chunkAnchor() ? 1 : 0, v -> RamielConfig.CHUNK_ANCHOR.set(v >= 0.5));
+            0.0, 1.0, 1.0, () -> RamielConfig.chunkAnchor() ? 1 : 0, v -> RamielConfig.CHUNK_ANCHOR.set(v >= 0.5)),
+    SHOCKWAVE("Shockwave", "Strength of the pressure wave from huge explosions. It throws players and mobs back. 0 = off.",
+            0.0, 3.0, 0.05, RamielConfig::shockwave, v -> RamielConfig.SHOCKWAVE.set(v)),
+    TREES_FALL("Trees fall", "Shockwaves knock trees over, away from the blast. Needs Destruction above 0.",
+            0.0, 1.0, 1.0, () -> RamielConfig.treesFall() ? 1 : 0, v -> RamielConfig.TREES_FALL.set(v >= 0.5));
 
     public final String label;
     public final String help;

@@ -1,6 +1,7 @@
 package dev.ramiel;
 
 import dev.ramiel.entity.RamielEntity;
+import dev.ramiel.entity.ToppleEntity;
 import dev.ramiel.item.AngelCoreItem;
 import dev.ramiel.item.MiniRamielItem;
 import dev.ramiel.item.PlasmaCellItem;
@@ -42,6 +43,16 @@ public final class ModRegistry {
                     .clientTrackingRange(32)
                     .updateInterval(2)
                     .build("ramiel"));
+
+    /** A tree falling over (see ToppleEntity). No AI, never moves; just a carrier for the tree's blocks until it lands. */
+    public static final DeferredHolder<EntityType<?>, EntityType<ToppleEntity>> TOPPLE = ENTITIES.register("topple",
+            () -> EntityType.Builder.<ToppleEntity>of(ToppleEntity::new, MobCategory.MISC)
+                    .sized(0.25f, 0.25f)
+                    .fireImmune()
+                    .noSummon()
+                    .clientTrackingRange(12)
+                    .updateInterval(Integer.MAX_VALUE)
+                    .build("topple"));
 
     public static final DeferredItem<MiniRamielItem> MINI_RAMIEL = ITEMS.register("mini_ramiel",
             () -> new MiniRamielItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC).fireResistant()));

@@ -37,6 +37,7 @@ public class StunAttack extends Attack {
             r.fx(FxKind.IMPACT_FRAME, r.centre(), 5, 0);
             r.fx(FxKind.SHAKE, r.centre(), 3.0, 60);
             r.fx(FxKind.SHOCKWAVE, r.centre(), 90, 40);
+            dev.ramiel.world.Shockwave.launch(r.serverLevel(), new net.minecraft.world.phys.Vec3(r.getX(), r.groundY(), r.getZ()), 90, 40, 0.9, false, r);
             r.playLoud(SoundEvents.ENDER_DRAGON_GROWL, 40f, 0.5f);
         }
         if (s == Stage.RECOVER) r.setSpinSpeed(0.12f);

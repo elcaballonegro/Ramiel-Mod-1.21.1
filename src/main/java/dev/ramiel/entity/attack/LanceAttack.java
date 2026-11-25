@@ -43,6 +43,7 @@ public class LanceAttack extends BeamAttack {
         r.fx(FxKind.BEAM_IMPACT, res.end(), dir.x, dir.y, dir.z, 2.5f, 0f);
         r.fx(FxKind.SCAR, res.end(), 14, 1400);
         r.fx(FxKind.SHOCKWAVE, res.end(), 28, 24);
+        dev.ramiel.world.Shockwave.launch(level, res.end(), dev.ramiel.world.Shockwave.along(dir, 0.3), 28, 24, 0.45, false, r);
         r.fx(FxKind.IMPACT_FRAME, res.end(), 3, 0);
         BeamCaster.damageRadius(level, r, res.end(), 16, 40f);
     }

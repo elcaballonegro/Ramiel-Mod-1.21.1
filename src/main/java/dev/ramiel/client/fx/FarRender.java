@@ -75,7 +75,7 @@ public final class FarRender {
             }
 
             Form from = Form.byId(b.formFrom()), target = Form.byId(b.formTo());
-            Brick[] bricks = RamielModel.shared().compute(from, target, b.morph(), time, 0f, 0f, 0f);
+            Brick[] bricks = RamielModel.shared().computeFor(b.id(), from, target, b.morph(), time, 0f, 0f, 0f);
             Quaternionf orient = blendedOrientation(from, target, b);
 
             BufferBuilder bb = new BufferBuilder(BYTES, VertexFormat.Mode.QUADS, DefaultVertexFormat.NEW_ENTITY);

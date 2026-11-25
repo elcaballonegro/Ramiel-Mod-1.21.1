@@ -337,6 +337,7 @@ public class RamielEntity extends Mob {
         if (p >= 1f) {
             Vec3 ground = new Vec3(getX(), groundBelow(level), getZ());
             fx(FxKind.SHOCKWAVE, ground, 140, 70);
+            dev.ramiel.world.Shockwave.launch(level, ground, 140, 70, 0.9, true, this);
             fx(FxKind.SHAKE, ground, 3.0, 50);
             fx(FxKind.IMPACT_FRAME, centre(), 4, 0);
             playLoud(ModRegistry.SND_BOOM.get(), 60f, 0.7f);
@@ -610,6 +611,7 @@ public class RamielEntity extends Mob {
             fx(FxKind.BLAST, c, 70, 0);
             fx(FxKind.IMPACT_FRAME, c, 6, 0);
             fx(FxKind.SHOCKWAVE, new Vec3(c.x, groundBelow(level), c.z), 180, 90);
+            dev.ramiel.world.Shockwave.launch(level, new Vec3(c.x, groundBelow(level), c.z), 180, 90, 1.4, true, this);
             playLoud(ModRegistry.SND_BOOM.get(), 80f, 0.6f);
         }
         if (t >= DEATH_TICKS) {

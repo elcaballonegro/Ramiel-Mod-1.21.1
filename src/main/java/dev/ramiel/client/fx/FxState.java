@@ -28,7 +28,7 @@ public final class FxState {
 
     // ---- data ----------------------------------------------------------------------------------
     /** Expanding ring. kind 0 = white-gold shockwave, 1 = pink/orange drill ring. */
-    public static final class Wave { public Vec3 pos; public double radius; public int age, life, kind; }
+    public static final class Wave { public Vec3 pos; public double radius; public int age, life, kind; public boolean passed; }
     /** Chain of glowing spheres and fireballs. */
     public static final class Blast { public Vec3 pos; public double radius; public int age, life; public long seed; }
     /** A glowing ground scar that cools over time. */
@@ -170,6 +170,30 @@ public final class FxState {
         impactStrength = Math.max(impactStrength * 0.5f, Math.min(1f, strength + 0.15f));
     }
 
+    /**
+     * When a big shockwave ring reaches the camera, hit the screen: a shake that scales with how hard the wave is there,
+     * and for the strongest ones a short impact frame. The ring follows the same curve as the server's physical wave
+     * (GroundFx.waves / ShockMath.radiusAt), so this lands at about the moment the push does.
+     */
+    private static void pressureWaves() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.gameRenderer == null || waves.isEmpty()) return;
+        Vec3 cam = mc.gameRenderer.getMainCamera().getPosition();
+        for (Wave w : waves) {
+            if (w.passed || w.kind != 0 || w.radius < 50) continue;
+            double p = Math.min(1.0, (w.age + 1.0) / w.life);
+            double reach = w.radius * (1.0 - Math.pow(1.0 - p, 2.2));
+            double d = Math.hypot(cam.x - w.pos.x, cam.z - w.pos.z);
+            if (d > reach) continue;
+            w.passed = true;
+            if (d >= w.radius) continue;
+            float f = (float) Math.pow(1.0 - d / w.radius, 1.4);
+            float size = (float) Math.min(1.0, w.radius / 150.0);
+            if (f > 0.03f) addShake((0.6f + 4.0f * f) * size, 20 + (int) (30 * f));
+            if (f > 0.35f && w.radius >= 120) startImpact(3, f * 0.6f);
+        }
+    }
+
     private static void addShake(float strength, int ticks) {
         if (strength <= 0.01f) return;
         shake = Math.max(shake, strength);
@@ -184,6 +208,7 @@ public final class FxState {
         if (shake <= 0f) shakeDecay = 0f;
         if (impactLeft > 0) impactLeft--; else impactStrength = 0f;
 
+        pressureWaves();
         age(waves); age(blasts); age(flares); age(rails);
         for (Iterator<Ripple> it = ripples.iterator(); it.hasNext(); ) {
             Ripple r = it.next();

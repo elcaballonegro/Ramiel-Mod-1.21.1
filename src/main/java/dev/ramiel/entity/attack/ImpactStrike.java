@@ -164,6 +164,7 @@ public class ImpactStrike extends Attack {
         r.fx(FxKind.IMPACT_FRAME, impact, 8, 0);
         r.fx(FxKind.BLAST, impact, radius, 0);
         r.fx(FxKind.SHOCKWAVE, impact, radius * 1.9, 80);
+        dev.ramiel.world.Shockwave.launch(level, impact, radius * 1.9, 80, 1.6, true, r);      // the force travels with the ring
         r.fx(FxKind.SHAKE, impact, 5.0, 90);
         r.fx(FxKind.WARN_ZONE, impact, radius, 0, 0, r.getId(), 0f);   // zone off
         r.fx(FxKind.SCAR, impact, radius * 1.05, 6000);

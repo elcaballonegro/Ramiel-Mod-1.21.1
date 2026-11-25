@@ -1,6 +1,9 @@
 package dev.ramiel.client.model;
 
 import dev.ramiel.Form;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import org.joml.Quaternionf;
 
 /**
@@ -56,12 +59,74 @@ public final class RamielModel {
      * @return the shared brick array (valid until the next call)
      */
     public Brick[] compute(Form fromForm, Form toForm, float morph, float time, float charge, float drill, float coreScale) {
+        return core(fromForm, toForm, morph, time, charge, drill, coreScale, null);
+    }
+
+    // ------------------------------------------------------------------------------------------
+    // Continuity between transformations (per drawn Ramiel)
+    // ------------------------------------------------------------------------------------------
+    private static final class Memory {
+        Form from, to;
+        float lastMorph = 1f;            // morph value that was actually used for the previous frame
+        boolean settling;                // the form pair just changed: wait for the morph clock to restart from 0
+        boolean fromSnapshot;            // start the current transformation from {@link #snapshot} instead of a form
+        final Brick[] last = FormPoses.newPool();
+        final Brick[] snapshot = FormPoses.newPool();
+        long used;
+    }
+
+    private final Map<Object, Memory> memory = new HashMap<>();
+    private long frame;
+
+    /**
+     * Like {@link #compute}, but remembers what was drawn for {@code key} (an entity id, or a beacon's UUID for the horizon version) so that
+     *  - the frame the form pair changes does not flash a half-finished pose (the entity's morph value still glides down from its old
+     *    value while the new pair is already in force: it is held at 0 until the clock has restarted), and
+     *  - a transformation that interrupts an unfinished one (a stun cutting off a half-done Lance) starts from the pose that was
+     *    on screen, not from the previous target form.
+     */
+    public Brick[] computeFor(Object key, Form fromForm, Form toForm, float morph, float time, float charge, float drill, float coreScale) {
+        frame++;
+        Memory m = memory.computeIfAbsent(key, k -> new Memory());
+        m.used = frame;
+        if (m.to != null && (m.from != fromForm || m.to != toForm)) {
+            // a new transformation has started. Was the previous one still going?
+            m.fromSnapshot = m.lastMorph < 0.98f;
+            if (m.fromSnapshot) {
+                for (int i = 0; i < FormPoses.COUNT; i++) m.snapshot[i].set(m.last[i]);
+            }
+            m.settling = true;
+        }
+        m.from = fromForm; m.to = toForm;
+        if (m.settling) {
+            if (morph <= 0.04f) m.settling = false;
+            else morph = 0f;
+        }
+        if (morph >= 1f) m.fromSnapshot = false;
+        Brick[] result = core(fromForm, toForm, morph, time, charge, drill, coreScale, m.fromSnapshot ? m.snapshot : null);
+        m.lastMorph = fromForm == toForm ? 1f : morph;
+        for (int i = 0; i < FormPoses.COUNT; i++) m.last[i].set(result[i]);
+        if (memory.size() > 24) {
+            for (Iterator<Memory> it = memory.values().iterator(); it.hasNext(); ) if (frame - it.next().used > 600) it.remove();
+        }
+        return result;
+    }
+
+    private void loadFrom(Brick[] into, Form form, Brick[] startPose, float time, float charge, float drill, float coreScale) {
+        if (startPose == null) {
+            FormPoses.fill(form, into, time, charge, drill, coreScale);
+        } else {
+            for (int i = 0; i < FormPoses.COUNT; i++) into[i].set(startPose[i]);
+        }
+    }
+
+    private Brick[] core(Form fromForm, Form toForm, float morph, float time, float charge, float drill, float coreScale, Brick[] start) {
         if (fromForm == toForm || morph >= 1f) {
             FormPoses.fill(toForm, out, time, charge, drill, coreScale);
             return out;
         }
         if (morph <= 0f) {
-            FormPoses.fill(fromForm, out, time, charge, drill, coreScale);
+            loadFrom(out, fromForm, start, time, charge, drill, coreScale);
             return out;
         }
 
@@ -69,7 +134,7 @@ public final class RamielModel {
             float split = isRest(toForm) ? SPLIT_CLOSE : isRest(fromForm) ? SPLIT_OPEN : SPLIT_BETWEEN;
             FormPoses.fold(mid, time, coreScale);
             if (morph < split) {
-                FormPoses.fill(fromForm, from, time, charge, drill, coreScale);
+                loadFrom(from, fromForm, start, time, charge, drill, coreScale);
                 blend(from, mid, morph / split, STAGGER, BURST, Ease.SMOOTH);
             } else {
                 FormPoses.fill(toForm, to, time, charge, drill, coreScale);
@@ -78,7 +143,7 @@ public final class RamielModel {
                         snap ? Ease.SNAP : Ease.SMOOTH);
             }
         } else {
-            FormPoses.fill(fromForm, from, time, charge, drill, coreScale);
+            loadFrom(from, fromForm, start, time, charge, drill, coreScale);
             FormPoses.fill(toForm, to, time, charge, drill, coreScale);
             blend(from, to, morph, STAGGER, toForm == Form.URCHIN ? BURST * 1.8f : BURST, Ease.SMOOTH);
         }
