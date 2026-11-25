@@ -13,6 +13,8 @@
 | Health | 1.0 | 0.25-5 | multiplies the base pool (3000) |
 | Notice range | 192 | 32-512 | blocks |
 | Star beam delay | 45 s | 10-180 | final phase |
+| Shockwave | 1.0 | 0-3 | multiplies every shockwave's throw and damage; 0 = off |
+| Trees fall | on | | shockwaves topple natural trees (needs Destruction above 0) |
 | Cutscenes | see config | 0-2 | 0 off, 1 key moments, 2 every transformation |
 | Ignore players | off | | |
 | Mobs flee / attack | on / on | | |
@@ -26,3 +28,7 @@ Morph feel: `RamielModel` (`SPLIT_OPEN 0.38`, `SPLIT_CLOSE 0.60`, `STAGGER`, `BU
 Camera: `Films` (distances are in R units; `baseDist()` clamps 2.4-5.5 R).
 Item hold transforms: the `display` block in `models/item/*.json`. Tune these first in game (F3+T reloads resources).
 Sunburst wheel: `FormPoses.sunburst` (ring radius 0.80 R, bead radius 0.11, central octahedron 0.26, 20 beads; spike lengths 0.9-1.8 R / 0.35-0.55 R). Keep the ring + shields inside 1.0 R or the collision slabs and `rayWheel` will not cover them.
+
+Shockwave numbers (`ShockMath`, `Shockwave`, and the call sites): push `2.4 x strength x falloff x cover` capped at 2.8 b/t (the server rubber-bands faster), lift cap 0.9,
+damage only within 30% of the radius, 6 trees per tick and 140 per wave. Per-event radius / duration / strength are the arguments at each `Shockwave.launch(...)`
+(table in docs/SHOCKWAVE.md). If a wave feels too weak or too violent, change the strength argument there or use the Shockwave setting.

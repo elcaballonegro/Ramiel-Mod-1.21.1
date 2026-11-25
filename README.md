@@ -15,6 +15,10 @@ Fan project; every texture, model and sound is original/generated. Mod id `ramie
 | **Plasma Cell** | nether star + diamond + blaze powder + ender pearl -> 2 | Railcannon ammo (one per shot) |
 | **Angel Core** | dropped by a defeated Ramiel | angel core + blaze powder + ender pearl -> 6 plasma cells |
 
+**Shockwaves:** the biggest explosions (the impact strike, and above all the star beam) send a pressure wave outward. It throws players and mobs
+back (less if you hide behind terrain, crouch or raise a shield), hurts anything close, and knocks natural trees over, away from the blast. Player-built
+wooden structures are never touched. Design in `docs/SHOCKWAVE.md`.
+
 Ramiel idles, spins slowly and never tracks anyone until threatened. Left alone it drills into the ground, charges a huge blast
 (red ring on the ground, "BLAST ZONE" HUD, alarm) and leaves a crater. When attacked, or when a player comes close, it changes shape
 (pieces visibly split, fold and re-form) and fires: Lance, Cross, Sunburst, Sentinel. Below 2/3 health it is stunned for a minute,
@@ -25,7 +29,7 @@ Weak point: the red core, exposed while charging and recovering. Shield (phase 1
 `/ramiel summon` | `summon_here` (anywhere, no water search) | `kill` | `phase2` | `heal` | `settings`
 
 ## Settings
-17 live settings (destruction, impact radius/charge time, damage, health, speed, aggression, notice range, mobs, cutscenes, horizon render...).
+19 live settings (destruction, impact radius/charge time, damage, health, speed, aggression, notice range, mobs, cutscenes, horizon render, shockwave strength, trees fall...).
 Open with Sneak + right click on the Mini Ramiel, or `/ramiel settings`. Saved to `ramiel-common.toml`. See TUNING.md.
 
 ## Build
