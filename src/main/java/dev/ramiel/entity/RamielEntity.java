@@ -499,6 +499,7 @@ public class RamielEntity extends Mob {
         entityData.set(D_SHIELD, Mth.clamp(shieldDur / SHIELD_MAX, 0f, 1f));
         fx(FxKind.SHIELD_HIT, centre().add(dir.scale(R * 0.95)), dir.x, dir.y, dir.z, Math.min(1f, amount / 12f + 0.3f), 0f);
         playLoud(ModRegistry.SND_SHIELD.get(), 3f, 0.9f + random.nextFloat() * 0.3f);
+        dev.ramiel.world.Sfx.deflect(serverLevel(), centre().add(dir.scale(R)));
         if (shieldDur <= 0f) breakShield();
     }
 

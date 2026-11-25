@@ -1,5 +1,6 @@
 package dev.ramiel.entity;
 
+import dev.ramiel.Form;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
@@ -36,7 +37,8 @@ public final class RamielHitTest {
             if (t >= 0) return new Hit(Type.CORE, lerp(from, to, t), t);
         }
         // 2) body octahedron
-        double t = rayOctahedron(p0, d, RamielEntity.R * r.bodyScale());
+        double t = r.form() == Form.SUNBURST ? rayWheel(p0, d, RamielEntity.R)
+                : rayOctahedron(p0, d, RamielEntity.R * r.bodyScale());
         if (t >= 0) return new Hit(Type.BODY, lerp(from, to, t), t);
         return MISS;
     }
@@ -61,6 +63,39 @@ public final class RamielHitTest {
         if (disc < 0) return -1;
         double t = (-b - Math.sqrt(disc)) / (2 * a);
         return (t >= 0 && t <= 1) ? t : -1;
+    }
+
+    /**
+     * The Sunburst wheel: a flat disc (radius ~1 R, half-height ~0.36 R) holding the little central
+     * octahedron, the spokes, the ring of small octahedra and their shields. The long spikes above and
+     * below are not part of it. Found by clipping the segment to a bounding sphere and stepping along it.
+     */
+    private static double rayWheel(Vector3f p0, Vector3f d, double R) {
+        final double bound = 1.12 * R;                         // sphere that holds the disc
+        double a = d.lengthSquared();
+        if (a < 1e-9) return insideWheel(p0.x, p0.y, p0.z, R) ? 0 : -1;
+        double b = 2.0 * p0.dot(d);
+        double c = p0.lengthSquared() - bound * bound;
+        double ta, tb;
+        if (c <= 0) { ta = 0; tb = Math.min(1.0, (-b + Math.sqrt(Math.max(0, b * b - 4 * a * c))) / (2 * a)); }
+        else {
+            double disc = b * b - 4 * a * c;
+            if (disc < 0) return -1;
+            double sq = Math.sqrt(disc);
+            ta = (-b - sq) / (2 * a); tb = (-b + sq) / (2 * a);
+            if (tb < 0 || ta > 1) return -1;
+            ta = Math.max(0, ta); tb = Math.min(1, tb);
+        }
+        final int steps = 96;
+        for (int i = 0; i <= steps; i++) {
+            double t = ta + (tb - ta) * i / steps;
+            if (insideWheel(p0.x + d.x * t, p0.y + d.y * t, p0.z + d.z * t, R)) return t;
+        }
+        return -1;
+    }
+
+    private static boolean insideWheel(double x, double y, double z, double R) {
+        return Math.abs(y) <= 0.36 * R && x * x + z * z <= (1.02 * R) * (1.02 * R);
     }
 
     /**

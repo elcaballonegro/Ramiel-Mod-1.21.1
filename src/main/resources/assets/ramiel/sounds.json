@@ -1,0 +1,58 @@
+{
+  "alarm": {
+    "subtitle": "subtitles.ramiel.alarm",
+    "sounds": [
+      {
+        "name": "ramiel:alarm"
+      }
+    ]
+  },
+  "charge": {
+    "subtitle": "subtitles.ramiel.charge",
+    "sounds": [
+      {
+        "name": "ramiel:charge"
+      }
+    ]
+  },
+  "beam": {
+    "subtitle": "subtitles.ramiel.beam",
+    "sounds": [
+      {
+        "name": "ramiel:beam"
+      }
+    ]
+  },
+  "boom": {
+    "subtitle": "subtitles.ramiel.boom",
+    "sounds": [
+      {
+        "name": "ramiel:boom"
+      }
+    ]
+  },
+  "morph": {
+    "subtitle": "subtitles.ramiel.morph",
+    "sounds": [
+      {
+        "name": "ramiel:morph"
+      }
+    ]
+  },
+  "rail": {
+    "subtitle": "subtitles.ramiel.rail",
+    "sounds": [
+      {
+        "name": "ramiel:rail"
+      }
+    ]
+  },
+  "shield": {
+    "subtitle": "subtitles.ramiel.shield",
+    "sounds": [
+      {
+        "name": "ramiel:shield"
+      }
+    ]
+  }
+}

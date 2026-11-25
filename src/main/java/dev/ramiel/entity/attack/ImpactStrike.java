@@ -160,6 +160,7 @@ public class ImpactStrike extends Attack {
         double destruction = RamielConfig.destruction();
 
         r.playLoud(ModRegistry.SND_BOOM.get(), 250f, 0.55f);
+        dev.ramiel.world.Sfx.boom(level, impact, 3f);
         r.fx(FxKind.IMPACT_FRAME, impact, 8, 0);
         r.fx(FxKind.BLAST, impact, radius, 0);
         r.fx(FxKind.SHOCKWAVE, impact, radius * 1.9, 80);

@@ -64,6 +64,7 @@ public final class RailcannonShot {
         Payloads.fx(level, start, 200, FxKind.IMPACT_FRAME, 2, 0, 0, 0f, 0f);
         level.playSound(null, player.getX(), player.getY(), player.getZ(), ModRegistry.SND_RAIL.get(),
                 net.minecraft.sounds.SoundSource.PLAYERS, 60f, 1f);
+        Sfx.laser(level, start, 1.2f);                                                // layered sonic crack under the shot
         player.setDeltaMovement(player.getDeltaMovement().add(dir.scale(-0.7)));       // recoil
         player.hurtMarked = true;
     }

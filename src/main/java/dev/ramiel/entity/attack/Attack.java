@@ -105,6 +105,7 @@ public abstract class Attack {
             done = true;
             cleanUp();
             r.setForm(afterForm(), 24);
+            if (afterForm() == Form.DORMANT) dev.ramiel.world.Sfx.slam(r.serverLevel(), r.centre());   // snaps shut
             onFinish();
             return;
         }

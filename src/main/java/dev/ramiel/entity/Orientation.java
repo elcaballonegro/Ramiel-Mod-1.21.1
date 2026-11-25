@@ -28,24 +28,25 @@ public final class Orientation {
     }
 
     public static Quaternionf forForm(RamielEntity r, Form form, float partial) {
+        return forAngles(form, r.aimYaw(partial), r.aimPitch(partial), r.spin(partial));
+    }
+
+    /** The same rule from plain numbers (degrees), for things that have no entity, like the horizon version. */
+    public static Quaternionf forAngles(Form form, float aimYawDeg, float aimPitchDeg, float spinDeg) {
         switch (form) {
             case SHIELD: {
                 // a face normal of the octahedron is (1,1,1)/sqrt(3); turn it toward the threat
                 Vector3f face = new Vector3f(1f, 1f, 1f).normalize();
-                net.minecraft.world.phys.Vec3 aim = r.aimDir(partial);
-                Vector3f dir = new Vector3f((float) aim.x, (float) aim.y, (float) aim.z);
-                return new Quaternionf().rotationTo(face, dir);
+                net.minecraft.world.phys.Vec3 aim = net.minecraft.world.phys.Vec3.directionFromRotation(aimPitchDeg, aimYawDeg);
+                return new Quaternionf().rotationTo(face, new Vector3f((float) aim.x, (float) aim.y, (float) aim.z));
             }
             case LANCE:
             case CROSS:
             case SENTINEL:
-            case STAR: {
-                float yaw = (float) Math.toRadians(r.aimYaw(partial));
-                float pitch = (float) Math.toRadians(r.aimPitch(partial));
-                return new Quaternionf().rotationYXZ(-yaw, pitch, 0f);
-            }
+            case STAR:
+                return new Quaternionf().rotationYXZ(-(float) Math.toRadians(aimYawDeg), (float) Math.toRadians(aimPitchDeg), 0f);
             default:
-                return new Quaternionf().rotationY((float) Math.toRadians(r.spin(partial)));
+                return new Quaternionf().rotationY((float) Math.toRadians(spinDeg));
         }
     }
 }

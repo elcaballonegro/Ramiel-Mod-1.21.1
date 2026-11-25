@@ -35,6 +35,7 @@ public abstract class BeamAttack extends Attack {
             case FIRE -> {
                 fireTick = 0;
                 r.playLoud(ModRegistry.SND_BEAM.get(), 60f, 1f);
+                dev.ramiel.world.Sfx.laser(r.serverLevel(), r.centre(), beamRadius() > 5 ? 2f : 1f);
                 r.fx(FxKind.IMPACT_FRAME, r.centre(), 3, 0);
                 r.fx(FxKind.SHAKE, r.centre(), 1.2, 30, 0, 0f, 0f);
             }
@@ -62,7 +63,7 @@ public abstract class BeamAttack extends Attack {
             }
             if (fireTick == 0) onFirstHit(res, dir);
             onBeamTick(fireTick, res, dir);
-            if (fireTick % 20 == 10) r.playLoud(ModRegistry.SND_BEAM.get(), 40f, 1.1f);
+            if (fireTick % 20 == 10) dev.ramiel.world.Sfx.laserHum(r.serverLevel(), r.centre(), beamRadius() > 5 ? 2f : 1f);
             fireTick++;
         }
     }
